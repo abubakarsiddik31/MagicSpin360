@@ -5,8 +5,8 @@ import Spinner from './components/Spinner';
 import { generate360Images, interpolateFrames } from './services/geminiService';
 import { LoadingProgress } from './types';
 import ImageGenerator from './components/ImageGenerator';
+import ImageDrawer from './components/ImageDrawer';
 
-const NUM_FRAMES = 4; // Lower for faster testing, increase for smoother rotation (e.g., 24, 36)
 const STYLES = ['Photorealistic', 'Cartoon', 'Clay Model', 'Watercolor', 'Pixel Art', 'Fantasy', 'Sci-Fi'];
 const BACKGROUND_OPTIONS = ['Original', 'Transparent', 'Custom'];
 
@@ -22,7 +22,8 @@ const App: React.FC = () => {
   const [style, setStyle] = useState<string>(STYLES[0]);
   const [backgroundOption, setBackgroundOption] = useState<string>(BACKGROUND_OPTIONS[0]);
   const [customBackground, setCustomBackground] = useState<string>('');
-  const [inputMode, setInputMode] = useState<'upload' | 'generate'>('upload');
+  const [inputMode, setInputMode] = useState<'upload' | 'generate' | 'draw'>('upload');
+  const [numFrames, setNumFrames] = useState<number>(4);
 
 
   const handleImageUpload = useCallback((file: File) => {
@@ -35,7 +36,7 @@ const App: React.FC = () => {
 
   const handleGenerate = async () => {
     if (!originalImageFile) {
-      setError('Please upload or generate an image first.');
+      setError('Please upload, generate, or draw an image first.');
       return;
     }
     if (backgroundOption === 'Custom' && !customBackground.trim()) {
@@ -45,13 +46,13 @@ const App: React.FC = () => {
 
     setError(null);
     setGeneratedImages([]);
-    setLoadingProgress({ current: 0, total: NUM_FRAMES + 1, message: 'Initializing...' });
+    setLoadingProgress({ current: 0, total: numFrames + 1, message: 'Initializing...' });
 
     try {
       const images = await generate360Images(
         originalImageFile,
         prompt,
-        NUM_FRAMES,
+        numFrames,
         style,
         backgroundOption,
         customBackground,
@@ -161,10 +162,14 @@ const App: React.FC = () => {
                     <button onClick={() => setInputMode('generate')} className={`px-4 py-2 text-sm font-medium transition ${inputMode === 'generate' ? 'border-b-2 border-blue-500 text-white' : 'text-gray-400 hover:bg-gray-700/50'}`}>
                         Generate with AI
                     </button>
+                    <button onClick={() => setInputMode('draw')} className={`px-4 py-2 text-sm font-medium transition ${inputMode === 'draw' ? 'border-b-2 border-blue-500 text-white' : 'text-gray-400 hover:bg-gray-700/50'}`}>
+                        Draw with AI
+                    </button>
                 </div>
 
                 {inputMode === 'upload' && <ImageUploader onImageUpload={handleImageUpload} initialImageUrl={previewUrl} />}
                 {inputMode === 'generate' && <ImageGenerator onImageReady={handleImageUpload} />}
+                {inputMode === 'draw' && <ImageDrawer onImageReady={handleImageUpload} />}
             </div>
 
             <div>
@@ -192,6 +197,22 @@ const App: React.FC = () => {
                         >
                             {STYLES.map(s => <option key={s} value={s}>{s}</option>)}
                         </select>
+                    </div>
+
+                    <div>
+                        <label htmlFor="frames-slider" className="block text-sm font-medium text-gray-400 mb-1">
+                            Number of Frames: <span className="font-bold text-white">{numFrames}</span>
+                        </label>
+                        <input
+                            id="frames-slider"
+                            type="range"
+                            min="4"
+                            max="12"
+                            step="1"
+                            value={numFrames}
+                            onChange={(e) => setNumFrames(Number(e.target.value))}
+                            className="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer"
+                        />
                     </div>
 
                     <div>
