@@ -1,0 +1,5 @@
+{
+  "name": "360° Image Generator",
+  "description": "Upload a 2D image of a character or object and generate an interactive 360-degree rotatable view using the Gemini API. Perfect for product showcases and character design.",
+  "requestFramePermissions": []
+}
