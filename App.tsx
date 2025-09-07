@@ -2,7 +2,7 @@ import React, { useState, useCallback } from 'react';
 import ImageUploader from './components/ImageUploader';
 import Viewer360 from './components/Viewer360';
 import Spinner from './components/Spinner';
-import { generate360Images } from './services/geminiService';
+import { generate360Images, interpolateFrames } from './services/geminiService';
 import { LoadingProgress } from './types';
 import ImageGenerator from './components/ImageGenerator';
 
@@ -16,6 +16,7 @@ const App: React.FC = () => {
   const [prompt, setPrompt] = useState<string>('A high-quality image of this object');
   const [generatedImages, setGeneratedImages] = useState<string[]>([]);
   const [loadingProgress, setLoadingProgress] = useState<LoadingProgress | null>(null);
+  const [isInterpolating, setIsInterpolating] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
   
   const [style, setStyle] = useState<string>(STYLES[0]);
@@ -66,6 +67,26 @@ const App: React.FC = () => {
     }
   };
 
+  const handleInterpolate = async () => {
+    if (generatedImages.length === 0) return;
+
+    setError(null);
+    setIsInterpolating(true);
+    setLoadingProgress({ current: 0, total: generatedImages.length, message: 'Initializing interpolation...' });
+
+    try {
+        const smootherImages = await interpolateFrames(generatedImages, (progress) => {
+            setLoadingProgress(progress);
+        });
+        setGeneratedImages(smootherImages);
+    } catch (e) {
+        setError(e instanceof Error ? e.message : 'An unknown error occurred during interpolation.');
+    } finally {
+        setIsInterpolating(false);
+        setLoadingProgress(null);
+    }
+  };
+
   const renderOutput = () => {
     if (loadingProgress) {
       return (
@@ -85,14 +106,25 @@ const App: React.FC = () => {
     if (error) {
         return (
             <div className="w-full h-full flex flex-col items-center justify-center bg-red-900/20 border border-red-500 rounded-lg p-8 text-center">
-                <h3 className="text-xl font-bold text-red-400 mb-2">Generation Failed</h3>
+                <h3 className="text-xl font-bold text-red-400 mb-2">Operation Failed</h3>
                 <p className="text-red-300">{error}</p>
             </div>
         );
     }
 
     if (generatedImages.length > 0) {
-      return <Viewer360 images={generatedImages} />;
+      return (
+        <div className="w-full h-full flex flex-col space-y-4">
+            <Viewer360 images={generatedImages} />
+            <button
+                onClick={handleInterpolate}
+                disabled={isInterpolating || !!loadingProgress}
+                className="w-full font-bold py-2 px-4 rounded-lg transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed bg-gradient-to-r from-green-500 to-teal-600 hover:from-green-600 hover:to-teal-700"
+            >
+                {isInterpolating ? 'Smoothing...' : '🌀 Double Frames & Smooth'}
+            </button>
+        </div>
+      );
     }
 
     return (
@@ -197,10 +229,10 @@ const App: React.FC = () => {
 
             <button
               onClick={handleGenerate}
-              disabled={!originalImageFile || !!loadingProgress}
+              disabled={!originalImageFile || !!loadingProgress || isInterpolating}
               className="w-full text-lg font-bold py-3 px-6 rounded-lg transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 enabled:shadow-lg enabled:shadow-blue-500/30"
             >
-              {loadingProgress ? 'Generating...' : '✨ Generate 360° View'}
+              {loadingProgress && !isInterpolating ? 'Generating...' : '✨ Generate 360° View'}
             </button>
           </div>
 

@@ -12,6 +12,14 @@ const fileToGenerativePart = async (file: File) => {
   };
 };
 
+const dataUrlToGenerativePart = (dataUrl: string) => {
+    const [header, data] = dataUrl.split(',');
+    const mimeType = header.match(/:(.*?);/)?.[1] || 'image/png';
+    return {
+      inlineData: { data, mimeType },
+    };
+  };
+
 export const generateSingleImage = async (prompt: string): Promise<string> => {
   if (!process.env.API_KEY) {
     throw new Error("API_KEY environment variable is not set.");
@@ -122,7 +130,7 @@ Based on the hierarchy above, create the master prompt.
 2.  **Write a detailed, narrative description of this subject rendered in the user's chosen "${style}" style.**
 3.  **Integrate the background** following the background instruction precisely. The background must also match the specified style.
 4.  **Ensure the scene is static.** The description should imply that lighting, subject, and background are fixed, and only the camera is moving.
-5.  **Include the placeholder:** The prompt MUST contain the exact placeholder \`**[CAMERA_ANGLE]**\` which will be replaced with the viewing angle for each frame.
+5.  **Include the placeholder:** The prompt MUST contain the exact placeholder \`**[CAMERA_INSTRUCTION]**\`. This placeholder will be replaced with a detailed command specifying the camera's exact horizontal angle, its behavior, and constraints for each frame.
 
 **OUTPUT FORMAT:**
 Produce ONLY the final master prompt text. No explanations, no preamble, no markdown.
@@ -174,9 +182,10 @@ export const generate360Images = async (
   for (let i = 0; i < numFrames; i++) {
     const angle = Math.round(i * (360 / numFrames));
     onProgress({ current: i + 1, total: totalSteps, message: `Generating frame ${i + 1} of ${numFrames} at ${angle}°...` });
-
-    // Replace the placeholder with the current angle for this frame
-    const framePrompt = masterPrompt.replace('**[CAMERA_ANGLE]**', `viewed from a precise ${angle}-degree angle`);
+    
+    // This instruction is critical for consistency.
+    const frameInstruction = `The camera is now at a precise ${angle}-degree horizontal angle. The subject MUST remain perfectly centered in the frame and maintain the same scale as the reference image. The lighting and background must not change. Only the camera's viewing angle should be different in this image.`;
+    const framePrompt = masterPrompt.replace('**[CAMERA_INSTRUCTION]**', frameInstruction);
 
     try {
       const response: GenerateContentResponse = await ai.models.generateContent({
@@ -218,3 +227,63 @@ export const generate360Images = async (
 
   return generatedImages;
 };
+
+export const interpolateFrames = async (
+    baseImages: string[],
+    onProgress: (progress: LoadingProgress) => void
+  ): Promise<string[]> => {
+    if (!process.env.API_KEY) {
+      throw new Error("API_KEY environment variable is not set.");
+    }
+    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+    const finalImages: string[] = [];
+    const totalSteps = baseImages.length;
+  
+    for (let i = 0; i < baseImages.length; i++) {
+      onProgress({ current: i, total: totalSteps, message: `Interpolating frame ${i + 1} of ${totalSteps}...` });
+  
+      const frameA = baseImages[i];
+      // Connect the last frame back to the first for a seamless loop
+      const frameB = baseImages[(i + 1) % baseImages.length];
+  
+      finalImages.push(frameA); // Add the original frame
+  
+      try {
+        const imagePartA = dataUrlToGenerativePart(frameA);
+        const imagePartB = dataUrlToGenerativePart(frameB);
+        const textPart = {
+          text: "You are an expert in video frame interpolation. Your task is to generate a single intermediate frame that smoothly transitions between the two provided images. Image 1 is the starting frame, and Image 2 is the ending frame. Create a new frame that represents the exact halfway point of the rotation between them. The subject's position, scale, lighting, and the background must be a perfect blend, creating a fluid motion. Do not introduce any new elements. Output only the image.",
+        };
+  
+        const response: GenerateContentResponse = await ai.models.generateContent({
+          model: 'gemini-2.5-flash-image-preview',
+          contents: {
+            parts: [imagePartA, imagePartB, textPart],
+          },
+          config: {
+            responseModalities: [Modality.IMAGE, Modality.TEXT],
+          },
+        });
+  
+        let imageFound = false;
+        for (const part of response.candidates[0].content.parts) {
+          if (part.inlineData) {
+            const base64ImageBytes: string = part.inlineData.data;
+            const imageUrl = `data:${part.inlineData.mimeType};base64,${base64ImageBytes}`;
+            finalImages.push(imageUrl); // Add the new interpolated frame
+            imageFound = true;
+            break;
+          }
+        }
+        if (!imageFound) {
+          // If interpolation fails, we can just skip adding the frame for now
+          console.warn(`Interpolation failed for frame between ${i} and ${i + 1}.`);
+        }
+      } catch (error) {
+        console.error(`Error interpolating frame between ${i} and ${i + 1}:`, error);
+        // Continue even if one frame fails
+      }
+    }
+    onProgress({ current: totalSteps, total: totalSteps, message: `Interpolation complete!` });
+    return finalImages;
+  };
