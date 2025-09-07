@@ -6,7 +6,7 @@ import { generate360Images } from './services/geminiService';
 import { LoadingProgress } from './types';
 import ImageGenerator from './components/ImageGenerator';
 
-const NUM_FRAMES = 12; // Lower for faster testing, increase for smoother rotation (e.g., 24, 36)
+const NUM_FRAMES = 4; // Lower for faster testing, increase for smoother rotation (e.g., 24, 36)
 const STYLES = ['Photorealistic', 'Cartoon', 'Clay Model', 'Watercolor', 'Pixel Art', 'Fantasy', 'Sci-Fi'];
 const BACKGROUND_OPTIONS = ['Original', 'Transparent', 'Custom'];
 
@@ -44,7 +44,7 @@ const App: React.FC = () => {
 
     setError(null);
     setGeneratedImages([]);
-    setLoadingProgress({ current: 0, total: NUM_FRAMES, message: 'Initializing...' });
+    setLoadingProgress({ current: 0, total: NUM_FRAMES + 1, message: 'Initializing...' });
 
     try {
       const images = await generate360Images(
@@ -77,7 +77,7 @@ const App: React.FC = () => {
                     style={{ width: `${(loadingProgress.current / loadingProgress.total) * 100}%` }}>
                 </div>
             </div>
-            <p className="text-gray-400 mt-2">{loadingProgress.current} / {loadingProgress.total} frames</p>
+            <p className="text-gray-400 mt-2">{loadingProgress.current} / {loadingProgress.total} steps</p>
         </div>
       );
     }

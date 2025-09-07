@@ -71,6 +71,76 @@ export const editSingleImage = async (base64ImageData: string, mimeType: string,
     throw new Error("Image editing failed to return a new image.");
 };
 
+/**
+ * Uses a generative model to analyze the user's input and create a single,
+ * highly detailed "master prompt" to ensure consistency across all generated frames.
+ */
+const createConsistentPrompt = async (
+  originalImageFile: File,
+  userPrompt: string,
+  style: string,
+  backgroundOption: string,
+  customBackground: string
+): Promise<string> => {
+    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY! });
+    const originalImagePart = await fileToGenerativePart(originalImageFile);
+
+    let backgroundInstruction = '';
+    switch (backgroundOption) {
+        case 'Original':
+            backgroundInstruction = 'Preserve the exact background from the uploaded image. Do not change it.';
+            break;
+        case 'Transparent':
+            backgroundInstruction = 'The background must be perfectly transparent. Only the subject should be visible.';
+            break;
+        case 'Custom':
+            backgroundInstruction = `Use a detailed scene described as: "${customBackground}". This background must remain static and consistent in perspective, lighting, and all elements across every frame.`;
+            break;
+        default:
+            backgroundInstruction = 'Preserve the exact background from the uploaded image.';
+    }
+
+    const analysisPrompt = `
+You are an expert prompt engineer for an advanced text-to-image AI model. Your task is to synthesize user inputs into a single, detailed "master prompt". This master prompt will be used to generate multiple frames of a 360-degree rotation.
+
+**CRITICAL INSTRUCTIONS - HIERARCHY OF PRIORITIES:**
+1.  **The User's Choices Are Paramount:** The user's specified style and background requirements MUST override the visual information in the uploaded image. The image is a reference for the *subject's form and identity*, not its style or environment.
+2.  **Main Subject is the Anchor:** The core object/character from the uploaded image must be the central focus. Accurately describe its fundamental shape and key features.
+3.  **Style is a Command:** The final output MUST be in the **"${style}"** style. Your description should reflect this, even if the original image has a different aesthetic.
+4.  **Background is Conditional:**
+    *   If the user chose 'Original', you must describe and preserve the background from the image.
+    *   If the user chose 'Custom' or a new 'Style', you MUST IGNORE the original background and create a new one based on their choice.
+
+**USER'S SPECIFICATIONS:**
+- **Subject Description:** "${userPrompt}"
+- **Mandatory Artistic Style:** "${style}"
+- **Background Instruction:** "${backgroundInstruction}"
+
+**YOUR TASK:**
+Based on the hierarchy above, create the master prompt.
+1.  **Analyze the reference image ONLY for the subject's core characteristics** (e.g., a red panda, a vintage book, a robot's shape).
+2.  **Write a detailed, narrative description of this subject rendered in the user's chosen "${style}" style.**
+3.  **Integrate the background** following the background instruction precisely. The background must also match the specified style.
+4.  **Ensure the scene is static.** The description should imply that lighting, subject, and background are fixed, and only the camera is moving.
+5.  **Include the placeholder:** The prompt MUST contain the exact placeholder \`**[CAMERA_ANGLE]**\` which will be replaced with the viewing angle for each frame.
+
+**OUTPUT FORMAT:**
+Produce ONLY the final master prompt text. No explanations, no preamble, no markdown.
+`;
+
+    const response = await ai.models.generateContent({
+        model: 'gemini-2.5-flash',
+        contents: {
+            parts: [
+                originalImagePart,
+                { text: analysisPrompt },
+            ],
+        },
+    });
+
+    return response.text.trim();
+};
+
 
 export const generate360Images = async (
   originalImageFile: File,
@@ -85,50 +155,28 @@ export const generate360Images = async (
     throw new Error("API_KEY environment variable is not set.");
   }
   const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-
   const generatedImages: string[] = [];
   const originalImagePart = await fileToGenerativePart(originalImageFile);
+  const totalSteps = numFrames + 1; // +1 for the analysis step
 
-  onProgress({ current: 0, total: numFrames, message: "Preparing to generate..." });
+  // Step 1: Create the master prompt for consistency
+  onProgress({ current: 0, total: totalSteps, message: "Analyzing image & requirements..." });
+  const masterPrompt = await createConsistentPrompt(
+    originalImageFile,
+    userPrompt,
+    style,
+    backgroundOption,
+    customBackground
+  );
+  onProgress({ current: 1, total: totalSteps, message: "Analysis complete. Generating frames..." });
 
+  // Step 2: Generate frames using the master prompt
   for (let i = 0; i < numFrames; i++) {
     const angle = Math.round(i * (360 / numFrames));
-    onProgress({ current: i, total: numFrames, message: `Generating frame at ${angle}°...` });
+    onProgress({ current: i + 1, total: totalSteps, message: `Generating frame ${i + 1} of ${numFrames} at ${angle}°...` });
 
-    let backgroundChoiceText = '';
-    switch (backgroundOption) {
-      case 'Original':
-        backgroundChoiceText = 'Preserve the exact background from the uploaded image. Do not change it.';
-        break;
-      case 'Transparent':
-        backgroundChoiceText = 'The background must be perfectly transparent. Only the subject should be visible.';
-        break;
-      case 'Custom':
-        backgroundChoiceText = customBackground
-          ? `A detailed scene described as: "${customBackground}". This background must remain static and consistent in perspective, lighting, and all elements across every frame, as if the camera is rotating around the subject within this fixed environment.`
-          : 'Preserve the exact background from the uploaded image. Do not change it.'; // Fallback
-        break;
-      default:
-        backgroundChoiceText = 'Preserve the exact background from the uploaded image. Do not change it.';
-    }
-
-    const prompt = `
-**Objective:** Generate a single, high-quality, stylized image that represents one frame in a 360-degree rotation of the subject from the provided reference image.
-
-**Subject:** Based on the uploaded image. The user's description is: "${userPrompt}".
-
-**Camera Angle:** The subject is viewed from a precise **${angle}-degree** angle in a clockwise rotation around its vertical axis.
-
-**Artistic Style:** Apply a consistent **"${style}"** style. The visual aesthetic must be uniform across all generated frames to create a seamless rotation effect.
-
-**Background:** ${backgroundChoiceText}
-
-**CRITICAL INSTRUCTIONS for CONSISTENCY:**
-1.  **Subject Fidelity:** The subject's core features, colors, textures, and details MUST remain identical to the reference image. DO NOT add, remove, or alter the subject's design.
-2.  **Lighting & Shadows:** The lighting environment must be static. The position and intensity of light sources and shadows must NOT change from frame to frame.
-3.  **Composition:** Keep the subject perfectly centered. The camera's distance and height relative to the subject must be fixed. Do not change the perspective or lens.
-4.  **Output:** Provide only the resulting image. Do not add any text or explanation.`;
-
+    // Replace the placeholder with the current angle for this frame
+    const framePrompt = masterPrompt.replace('**[CAMERA_ANGLE]**', `viewed from a precise ${angle}-degree angle`);
 
     try {
       const response: GenerateContentResponse = await ai.models.generateContent({
@@ -136,7 +184,7 @@ export const generate360Images = async (
         contents: {
           parts: [
             originalImagePart,
-            { text: prompt },
+            { text: framePrompt },
           ],
         },
         config: {
@@ -158,7 +206,9 @@ export const generate360Images = async (
         throw new Error(`Frame ${i + 1} generation failed: No image data returned.`);
       }
 
-      onProgress({ current: i + 1, total: numFrames, message: `Frame ${i + 1} complete.` });
+      // Update progress after successful generation of a frame
+      onProgress({ current: i + 2, total: totalSteps, message: `Frame ${i + 1} complete.` });
+
     } catch (error) {
       console.error(`Error generating frame ${i + 1}:`, error);
       const errorMessage = error instanceof Error ? error.message : "An unknown error occurred.";
