@@ -148,7 +148,7 @@ const createConsistentPrompt = async (
     }
 
     const analysisPrompt = `
-You are an expert prompt engineer for an advanced text-to-image AI model. Your task is to synthesize user inputs into a single, detailed "master prompt". This master prompt will be used to generate multiple frames of a 360-degree rotation.
+You are an expert prompt engineer for an advanced text-to-image AI model. Your task is to synthesize user inputs into a single, detailed "master prompt". This master prompt will be used as a consistent reference to generate multiple frames of a 360-degree rotation, preventing the subject from "drifting" in appearance.
 
 **CRITICAL INSTRUCTIONS - HIERARCHY OF PRIORITIES:**
 1.  **The User's Choices Are Paramount:** The user's specified style and background requirements MUST override the visual information in the uploaded image. The image is a reference for the *subject's form and identity*, not its style or environment.
@@ -169,7 +169,7 @@ Based on the hierarchy above, create the master prompt.
 2.  **Write a detailed, narrative description of this subject rendered in the user's chosen "${style}" style.**
 3.  **Integrate the background** following the background instruction precisely. The background must also match the specified style.
 4.  **Ensure the scene is static.** The description should imply that lighting, subject, and background are fixed, and only the camera is moving.
-5.  **Include the placeholder:** The prompt MUST contain the exact placeholder \`**[CAMERA_INSTRUCTION]**\`. This placeholder will be replaced with a detailed command specifying the camera's exact horizontal angle, its behavior, and constraints for each frame.
+5.  **Focus on Description:** The prompt should be a pure, detailed description of the subject, style, and scene. It will be used as a constant reference to prevent the subject's appearance from changing during rotation. Do not include placeholders for camera angles.
 
 **OUTPUT FORMAT:**
 Produce ONLY the final master prompt text. No explanations, no preamble, no markdown.
@@ -203,7 +203,6 @@ export const generate360Images = async (
   }
   const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
   const generatedImages: string[] = [];
-  const originalImagePart = await fileToGenerativePart(originalImageFile);
   const totalSteps = numFrames + 1; // +1 for the analysis step
 
   // Step 1: Create the master prompt for consistency
@@ -217,23 +216,24 @@ export const generate360Images = async (
   );
   onProgress({ current: 1, total: totalSteps, message: "Analysis complete. Generating frames..." });
 
-  // Step 2: Generate frames using the master prompt
+  // Initialize with the user's uploaded image
+  let previousImagePart = await fileToGenerativePart(originalImageFile);
+  let previousAngle = 0;
+
+  // Step 2: Generate frames sequentially, using the previous frame as input for the next
   for (let i = 0; i < numFrames; i++) {
-    const angle = Math.round(i * (360 / numFrames));
-    onProgress({ current: i + 1, total: totalSteps, message: `Generating frame ${i + 1} of ${numFrames} at ${angle}°...` });
+    const targetAngle = Math.round((i + 1) * (360 / numFrames));
+    onProgress({ current: i + 1, total: totalSteps, message: `Generating frame ${i + 1} of ${numFrames} at ${targetAngle}°...` });
     
-    // This instruction is critical for consistency.
-    const frameInstruction = `The camera is now at a precise ${angle}-degree horizontal angle. The subject MUST remain perfectly centered in the frame and maintain the same scale as the reference image. The lighting and background must not change. Only the camera's viewing angle should be different in this image.`;
-    const framePrompt = masterPrompt.replace('**[CAMERA_INSTRUCTION]**', frameInstruction);
+    const framePrompt = `${masterPrompt}
+
+**ROTATION TASK:** The provided image shows the subject at approximately a ${previousAngle}-degree horizontal angle. Your task is to generate the next frame, rotating the subject to a ${targetAngle}-degree horizontal view. Maintain perfect consistency in style, lighting, scale, and background as described in the master prompt above. The rotation should be smooth and incremental. The subject must remain perfectly centered.`;
 
     try {
       const response: GenerateContentResponse = await ai.models.generateContent({
         model: 'gemini-2.5-flash-image-preview',
         contents: {
-          parts: [
-            originalImagePart,
-            { text: framePrompt },
-          ],
+          parts: [previousImagePart, { text: framePrompt }],
         },
         config: {
           responseModalities: [Modality.IMAGE, Modality.TEXT],
@@ -246,6 +246,10 @@ export const generate360Images = async (
           const base64ImageBytes: string = part.inlineData.data;
           const imageUrl = `data:${part.inlineData.mimeType};base64,${base64ImageBytes}`;
           generatedImages.push(imageUrl);
+          
+          // The newly generated image becomes the input for the next frame
+          previousImagePart = { inlineData: { data: base64ImageBytes, mimeType: part.inlineData.mimeType } };
+          previousAngle = targetAngle;
           imageFound = true;
           break;
         }
@@ -260,7 +264,7 @@ export const generate360Images = async (
     } catch (error) {
       console.error(`Error generating frame ${i + 1}:`, error);
       const errorMessage = error instanceof Error ? error.message : "An unknown error occurred.";
-      throw new Error(`Failed to generate frame ${i + 1} at ${angle} degrees. Reason: ${errorMessage}`);
+      throw new Error(`Failed to generate frame ${i + 1} at ${targetAngle} degrees. Reason: ${errorMessage}`);
     }
   }
 
