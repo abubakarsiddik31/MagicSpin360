@@ -1,14 +1,20 @@
-
-import React, { useState, useCallback, useRef } from 'react';
+import React, { useState, useCallback, useRef, useEffect } from 'react';
 
 interface ImageUploaderProps {
   onImageUpload: (file: File) => void;
+  initialImageUrl?: string | null;
 }
 
-const ImageUploader: React.FC<ImageUploaderProps> = ({ onImageUpload }) => {
-  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+const ImageUploader: React.FC<ImageUploaderProps> = ({ onImageUpload, initialImageUrl }) => {
+  const [previewUrl, setPreviewUrl] = useState<string | null>(initialImageUrl || null);
   const [isDragging, setIsDragging] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (initialImageUrl) {
+        setPreviewUrl(initialImageUrl);
+    }
+  }, [initialImageUrl]);
 
   const handleFileChange = useCallback((files: FileList | null) => {
     if (files && files[0]) {
