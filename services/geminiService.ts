@@ -94,7 +94,8 @@ export const enhanceDrawing = async (base64ImageData: string, mimeType: string, 
         },
     };
 
-    const textPart = { text: `Transform this user's drawing into a high-quality, detailed image. Follow these instructions: "${prompt}". The output should be a fully rendered image that respects the composition and subject of the original drawing.` };
+    const textPart = { text: `You are an AI image generation assistant. Your task is to take a user's rough sketch (the provided image) and a text prompt, and transform the sketch into a fully realized, high-quality image.
+**CRITICAL:** The composition, shapes, and placement of objects in the output image MUST strictly follow the user's sketch. The text prompt, "${prompt}", should ONLY be used to define the artistic style, color, texture, and finer details. Do not add, remove, or reposition major elements from the original sketch. The final output must be an enhanced, detailed version of the provided drawing.` };
 
     const response: GenerateContentResponse = await ai.models.generateContent({
         model: 'gemini-2.5-flash-image-preview',
