@@ -1,6 +1,4 @@
 <div align="center">
-  <img src="https://github.com/abubakarsiddik31/MagicSpin/blob/main/image.png?raw=1" alt="MagicSpin 360° UI preview" width="720" />
-
   <h1>MagicSpin 360°</h1>
   <p><strong>Turn a single image into an interactive 360° spin powered by Google Gemini.</strong></p>
 
@@ -9,6 +7,8 @@
     <a href="#features">Features</a> •
     <a href="#responsible-use">Responsible Use</a>
   </p>
+
+  <img src="https://github.com/abubakarsiddik31/MagicSpin/blob/main/image.png?raw=1" alt="MagicSpin 360° UI preview" width="720" />
 </div>
 
 MagicSpin 360° turns a single 2D product or character shot into an interactive 360° spin using Google Gemini image models. The app lets you upload, generate, or sketch a subject, customise the style/background, and export a smooth rotation that is ideal for public showcases.
@@ -19,6 +19,12 @@ MagicSpin 360° turns a single 2D product or character shot into an interactive 
 - Optional frame interpolation to double the number of angles for a smoother spin experience.
 - Touch/drag friendly 360° viewer with autoplay controls.
 - TypeScript-first React codebase with dedicated modules for Gemini interactions and image utilities.
+
+## Workflow
+<div align="center">
+  <img src="https://github.com/abubakarsiddik31/MagicSpin/blob/main/workflow.png?raw=1" alt="MagicSpin 360° workflow" width="720" />
+  <p><em>High-level flow: gather or create a base image → craft a consistent Master prompt → generate frames → optionally interpolate → preview the 360° viewer.</em></p>
+</div>
 
 ## Tech Stack
 - [Vite](https://vitejs.dev/) + React 19 + TypeScript
