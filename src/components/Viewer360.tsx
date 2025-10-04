@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect, useCallback } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from "react";
 
 interface Viewer360Props {
   images: string[];
@@ -22,44 +22,50 @@ const Viewer360: React.FC<Viewer360Props> = ({ images }) => {
     setIsDragging(true);
     startXRef.current = e.clientX;
     startFrameRef.current = currentFrame;
-    e.currentTarget.style.cursor = 'grabbing';
+    e.currentTarget.style.cursor = "grabbing";
   };
 
   const handleMouseUp = () => {
     setIsDragging(false);
     if (containerRef.current) {
-      containerRef.current.style.cursor = 'grab';
+      containerRef.current.style.cursor = "grab";
     }
   };
 
-  const handleMouseMove = useCallback((e: MouseEvent) => {
-    if (!isDragging || !containerRef.current) return;
-    
-    const sensitivity = 3;
-    const dx = e.clientX - startXRef.current;
-    const containerWidth = containerRef.current.offsetWidth;
-    const frameChange = Math.round((dx / containerWidth) * images.length * sensitivity);
+  const handleMouseMove = useCallback(
+    (e: MouseEvent) => {
+      if (!isDragging || !containerRef.current) return;
 
-    let nextFrame = startFrameRef.current - frameChange;
-    
-    const newFrame = ((nextFrame % images.length) + images.length) % images.length;
+      const sensitivity = 3;
+      const dx = e.clientX - startXRef.current;
+      const containerWidth = containerRef.current.offsetWidth;
+      const frameChange = Math.round(
+        (dx / containerWidth) * images.length * sensitivity
+      );
 
-    setCurrentFrame(newFrame);
-  }, [isDragging, images.length]);
+      let nextFrame = startFrameRef.current - frameChange;
+
+      const newFrame =
+        ((nextFrame % images.length) + images.length) % images.length;
+
+      setCurrentFrame(newFrame);
+    },
+    [isDragging, images.length]
+  );
 
   const handleSliderChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     handleInteractionStart();
     setCurrentFrame(Number(e.target.value));
   };
-  
+
   const togglePlay = () => {
-    setIsPlaying(prev => !prev);
+    setIsPlaying((prev) => !prev);
   };
 
   useEffect(() => {
     if (isPlaying) {
       intervalRef.current = window.setInterval(() => {
-        setCurrentFrame(prevFrame => (prevFrame + 1) % images.length);
+        setCurrentFrame((prevFrame) => (prevFrame + 1) % images.length);
       }, 100); // 10 frames per second
     } else {
       if (intervalRef.current) {
@@ -76,13 +82,13 @@ const Viewer360: React.FC<Viewer360Props> = ({ images }) => {
 
   useEffect(() => {
     if (isDragging) {
-      window.addEventListener('mousemove', handleMouseMove);
-      window.addEventListener('mouseup', handleMouseUp);
+      window.addEventListener("mousemove", handleMouseMove);
+      window.addEventListener("mouseup", handleMouseUp);
     }
 
     return () => {
-      window.removeEventListener('mousemove', handleMouseMove);
-      window.removeEventListener('mouseup', handleMouseUp);
+      window.removeEventListener("mousemove", handleMouseMove);
+      window.removeEventListener("mouseup", handleMouseUp);
     };
   }, [isDragging, handleMouseMove]);
 
@@ -96,7 +102,7 @@ const Viewer360: React.FC<Viewer360Props> = ({ images }) => {
         ref={containerRef}
         className="relative w-full aspect-square bg-gray-800 rounded-lg overflow-hidden touch-none select-none"
         onMouseDown={handleMouseDown}
-        style={{ cursor: 'grab' }}
+        style={{ cursor: "grab" }}
       >
         {images.map((src, index) => (
           <img
@@ -105,14 +111,14 @@ const Viewer360: React.FC<Viewer360Props> = ({ images }) => {
             alt={`Frame ${index + 1}`}
             className="absolute top-0 left-0 w-full h-full object-contain"
             style={{
-              visibility: index === currentFrame ? 'visible' : 'hidden',
-              pointerEvents: 'none',
+              visibility: index === currentFrame ? "visible" : "hidden",
+              pointerEvents: "none",
             }}
             draggable={false}
           />
         ))}
-         <div className="absolute bottom-2 left-1/2 -translate-x-1/2 bg-black bg-opacity-50 text-white text-xs px-2 py-1 rounded">
-            Drag to rotate
+        <div className="absolute bottom-2 left-1/2 -translate-x-1/2 bg-black bg-opacity-50 text-white text-xs px-2 py-1 rounded">
+          Drag to rotate
         </div>
       </div>
       <div className="w-full">
@@ -120,15 +126,33 @@ const Viewer360: React.FC<Viewer360Props> = ({ images }) => {
           <button
             onClick={togglePlay}
             className="p-2 bg-gray-700 hover:bg-gray-600 rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500"
-            aria-label={isPlaying ? 'Pause rotation' : 'Play rotation'}
+            aria-label={isPlaying ? "Pause rotation" : "Play rotation"}
           >
             {isPlaying ? (
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zM7 8a1 1 0 00-1 1v2a1 1 0 102 0V9a1 1 0 00-1-1zm6 0a1 1 0 00-1 1v2a1 1 0 102 0V9a1 1 0 00-1-1z" clipRule="evenodd" />
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                className="h-5 w-5"
+                viewBox="0 0 20 20"
+                fill="currentColor"
+              >
+                <path
+                  fillRule="evenodd"
+                  d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zM7 8a1 1 0 00-1 1v2a1 1 0 102 0V9a1 1 0 00-1-1zm6 0a1 1 0 00-1 1v2a1 1 0 102 0V9a1 1 0 00-1-1z"
+                  clipRule="evenodd"
+                />
               </svg>
             ) : (
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clipRule="evenodd" />
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                className="h-5 w-5"
+                viewBox="0 0 20 20"
+                fill="currentColor"
+              >
+                <path
+                  fillRule="evenodd"
+                  d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z"
+                  clipRule="evenodd"
+                />
               </svg>
             )}
           </button>
