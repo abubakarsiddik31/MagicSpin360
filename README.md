@@ -1,4 +1,15 @@
-# MagicSpin 360°
+<div align="center">
+  <img src="https://github.com/abubakarsiddik31/MagicSpin/blob/main/image.png?raw=1" alt="MagicSpin 360° UI preview" width="720" />
+
+  <h1>MagicSpin 360°</h1>
+  <p><strong>Turn a single image into an interactive 360° spin powered by Google Gemini.</strong></p>
+
+  <p>
+    <a href="#getting-started">Getting Started</a> •
+    <a href="#features">Features</a> •
+    <a href="#responsible-use">Responsible Use</a>
+  </p>
+</div>
 
 MagicSpin 360° turns a single 2D product or character shot into an interactive 360° spin using Google Gemini image models. The app lets you upload, generate, or sketch a subject, customise the style/background, and export a smooth rotation that is ideal for public showcases.
 
@@ -30,7 +41,7 @@ Create a `.env.local` file in the project root and add your API key:
 ```bash
 VITE_GEMINI_API_KEY=your-key-here
 ```
-> ⚠️ Do **not** commit `.env.local` or your API key to source control. When deploying publicly you should proxy requests through a backend or secrets manager instead of exposing the key in the browser.
+> 🚨 **Never expose your Gemini key.** Keep `.env.local` out of source control and inject the key only through secure runtime secrets. Browsers cannot protect private keys.
 
 ### Available scripts
 - `npm run dev` – start the Vite dev server
@@ -82,16 +93,16 @@ VITE_GEMINI_API_KEY=your-key-here
 ## Deployment checklist
 - Run `npm run check` before deploying to ensure the build and type checks pass.
 - Configure your hosting platform to inject `VITE_GEMINI_API_KEY` securely (never hard-code it in the bundle).
-- If you plan a public production release, route Gemini calls through a server-side proxy to keep the API key private and enforce quotas.
+- **Route Gemini calls through a trusted backend** before any public launch so you can keep the API key private, throttle abuse, and add auth.
 
 ## Responsible Use
 Although the repository is shared under an extremely permissive dedication, please avoid using MagicSpin 360° to:
 - create or distribute content that promotes hate, discrimination, or harassment;
-- any activity that violates privacy or civil liberties;
+- support surveillance, profiling, or any activity that violates privacy or civil liberties;
 - generate deceptive media or misinformation.
 
 ## Contributing
-Contributions are welcome via pull request. Please follow the responsible-use guidelines above when proposing features or documentation.
+> ⚠️ **Security help wanted.** MagicSpin 360° was assembled quickly for the [Kaggle Banana competition](https://www.kaggle.com/competitions/banana/overview), so it currently ships without a hardened backend, authentication, or robust security safeguards. Pull requests that harden the stack, add responsible defaults, or improve deployment docs are especially welcome. Whatever you propose, please follow the responsible-use guidelines above.
 
 ## License
 This project is dedicated to the public domain under [CC0 1.0 Universal](LICENSE). If you reuse the code, consider preserving the responsible-use notice so downstream users understand the intent behind the project.
