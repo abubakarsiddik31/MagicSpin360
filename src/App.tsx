@@ -396,6 +396,23 @@ const App: React.FC = () => {
             {renderOutput()}
           </div>
         </main>
+        <footer className="mt-8 text-center text-xs text-gray-500 space-x-2">
+          <span>Built by Abu Bakar Siddik</span>
+          <a
+            className="text-blue-400 hover:text-blue-300"
+            href="mailto:abubakar1808031@gmail.com"
+          >
+            Email
+          </a>
+          <a
+            className="text-blue-400 hover:text-blue-300"
+            href="https://www.linkedin.com/in/abu-bakar-siddik31/"
+            target="_blank"
+            rel="noreferrer"
+          >
+            LinkedIn
+          </a>
+        </footer>
       </div>
     </div>
   );

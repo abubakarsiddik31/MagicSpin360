@@ -3,6 +3,7 @@
   "private": true,
   "version": "1.0.0",
   "description": "Turn a single product or character image into an interactive 360° experience powered by Gemini.",
+  "author": "Abu Bakar Siddik <abubakar1808031@gmail.com>",
   "type": "module",
   "scripts": {
     "dev": "vite",
