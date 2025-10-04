@@ -84,3 +84,14 @@ VITE_GEMINI_API_KEY=your-key-here
 - Configure your hosting platform to inject `VITE_GEMINI_API_KEY` securely (never hard-code it in the bundle).
 - If you plan a public production release, route Gemini calls through a server-side proxy to keep the API key private and enforce quotas.
 
+## Responsible Use
+Although the repository is shared under an extremely permissive dedication, please avoid using MagicSpin 360° to:
+- create or distribute content that promotes hate, discrimination, or harassment;
+- any activity that violates privacy or civil liberties;
+- generate deceptive media or misinformation.
+
+## Contributing
+Contributions are welcome via pull request. Please follow the responsible-use guidelines above when proposing features or documentation.
+
+## License
+This project is dedicated to the public domain under [CC0 1.0 Universal](LICENSE). If you reuse the code, consider preserving the responsible-use notice so downstream users understand the intent behind the project.
