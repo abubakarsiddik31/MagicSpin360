@@ -1,6 +1,7 @@
 <div align="center">
   <h1>MagicSpin 360°</h1>
   <p><strong>Turn a single image into an interactive 360° spin powered by Google Gemini.</strong></p>
+  <p><a href="https://www.kaggle.com/competitions/banana/writeups/magicspin-360"><strong>🏆 Kaggle Banana Competition Write-up</strong></a></p>
 
   <p>
     <a href="#getting-started">Getting Started</a> •
